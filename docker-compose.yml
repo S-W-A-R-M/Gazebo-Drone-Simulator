@@ -1,0 +1,19 @@
+services:
+  ros-sim:
+    build: .
+    container_name: ros2_gazebo_container
+    stdin_open: true
+    tty: true
+    network_mode: host
+    ipc: host
+    privileged: true
+    environment:
+      - DISPLAY=${DISPLAY}
+      - WAYLAND_DISPLAY=${WAYLAND_DISPLAY}
+      - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
+      - PULSE_SERVER=unix:${PULSE_SERVER}
+      - LIBGL_ALWAYS_SOFTWARE=1 # Force software rendering if GPU drivers are acting up
+      - QT_X11_NO_MITSHM=1
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /mnt/wslg:/mnt/wslg:rw # Essential for WSLg to pass the GUI through
