@@ -1,0 +1,50 @@
+# docker-compose.yml
+services:
+  swarm-dev:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: swarm_dev
+    
+    # ── GUI passthrough (WSLg / X11) ────────────────────────────────────────
+    environment:
+      - DISPLAY=${DISPLAY}
+      - WAYLAND_DISPLAY=${WAYLAND_DISPLAY}
+      - XDG_RUNTIME_DIR=/tmp/runtime-swarm
+      - ROS_DOMAIN_ID=42
+      - LIBGL_ALWAYS_SOFTWARE=0   # set to 1 if you hit GPU rendering issues
+    volumes:
+      # WSLg sockets
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /mnt/wslg:/mnt/wslg:rw
+      # Your source code (live-editable from host)
+      - ./src:/swarm_ws/src:rw
+      # Build artifacts persist across container restarts
+      - swarm_build:/swarm_ws/build
+      - swarm_install:/swarm_ws/install
+      - swarm_log:/swarm_ws/log
+    
+    # ── Networking (required for multi-drone DDS discovery in Phase 2) ──────
+    network_mode: host
+    
+    # ── Hardware access ─────────────────────────────────────────────────────
+    privileged: false
+   # devices:
+    #- /dev/dri:/dev/dri   # GPU render node for Gazebo
+
+    stdin_open: true
+    tty: true
+    working_dir: /swarm_ws
+    command: sleep infinity # keeps container alive without doing anything
+ 
+  # ── Optional: dedicated Gazebo GUI container (useful for headless CI later)
+  # Uncomment when you're ready to split sim from logic nodes
+  # gazebo-sim:
+  #   ...
+
+volumes:
+  swarm_build:
+  swarm_install:
+  swarm_log:
+
+  
