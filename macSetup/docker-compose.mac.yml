@@ -1,0 +1,55 @@
+# docker-compose.yml  ──  Mac-compatible version
+services:
+  swarm-dev:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    platform: linux/arm64        
+    container_name: swarm_dev
+
+    ports:
+      - "5900:5900"
+
+    # ── GUI passthrough (XQuartz on macOS) ───────────────────────────────────
+    # Before running: install XQuartz (brew install --cask xquartz),
+    # then each session run: xhost +127.0.0.1
+    environment:
+      - DISPLAY=:99  
+      - ROS_DOMAIN_ID=42
+      - LIBGL_ALWAYS_SOFTWARE=1          # Mac has no /dev/dri passthrough; use Mesa SW renderer
+
+    volumes:
+      # X11 socket from XQuartz
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Your source code (live-editable from host)
+      - ./src:/swarm_ws/src:rw
+      # Build artifacts persist across container restarts
+      - swarm_build:/swarm_ws/build
+      - swarm_install:/swarm_ws/install
+      - swarm_log:/swarm_ws/log
+
+    # ── Networking ────────────────────────────────────────────────────────────
+    # network_mode: host is broken on Docker Desktop for Mac (maps to the
+    # Linux VM, not your Mac). Use a named bridge instead.
+    # For Phase 2 multi-drone DDS discovery, add more services to this
+    # same network and set ROS_LOCALHOST_ONLY=0.
+    networks:
+      - swarm_net
+
+    # ── Hardware access ───────────────────────────────────────────────────────
+    privileged: false
+    # /dev/dri is not available on Mac; GPU rendering handled by LIBGL_ALWAYS_SOFTWARE=1 above
+
+    stdin_open: true
+    tty: true
+    working_dir: /swarm_ws
+    command: sleep infinity
+
+networks:
+  swarm_net:
+    driver: bridge
+
+volumes:
+  swarm_build:
+  swarm_install:
+  swarm_log:

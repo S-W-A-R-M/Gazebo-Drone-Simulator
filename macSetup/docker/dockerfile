@@ -1,0 +1,30 @@
+FROM osrf/ros:jazzy-desktop-full
+
+# ── rosdep init ──────────────────────────────────────────────────────────────
+RUN rosdep init 2>/dev/null || true && rosdep update
+
+# ── Non-root user ─────────────────────────────────────────────────────────────
+ARG USERNAME=swarm
+ARG USER_UID=1000
+ARG USER_GID=1000
+
+RUN groupmod -n $USERNAME $(getent group $USER_GID | cut -d: -f1) \
+    && usermod -l $USERNAME -d /home/$USERNAME -m $(getent passwd $USER_UID | cut -d: -f1) \
+    && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    xvfb x11vnc openbox \
+    && rm -rf /var/lib/apt/lists/*
+
+USER $USERNAME
+WORKDIR /home/$USERNAME
+
+RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc \
+    && echo "source /swarm_ws/install/setup.bash 2>/dev/null || true" >> ~/.bashrc \
+    && echo "export ROS_DOMAIN_ID=42" >> ~/.bashrc
+
+COPY --chown=$USERNAME docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["bash"]
