@@ -1,43 +1,108 @@
-# Gazebo Drone Simulator (S-W-A-R-M)
+# Project SWARM
 
-This repository provides a containerized development environment for drone swarm coordination research. It is configured to use **ROS 2 Jazzy Jalisco** and **Gazebo Harmonic** to ensure a modern, high-fidelity simulation environment.
-
-##  Prerequisites
-
-Before starting, ensure you have the following installed:
-*   **Docker** and **Docker Compose**
-*   **WSL 2** (if using Windows)
-*   **NVIDIA Container Toolkit** (Optional, for GPU acceleration)
+Project **SWARM** is an undergraduate research initiative at the **University of Washington Bothell Distributed Systems Laboratory (DSLab)**. This project focuses on developing an autonomous drone swarm capable of high-fidelity heat mapping and perimeter identification in dynamic forest fire environments using distributed computing and evolutionary algorithms.
 
 ---
 
-##  Getting Started
+##  Project Roadmap
 
-### 1. Build the Environment
-Build the Docker image. This will install all ROS 2 and Gazebo dependencies.
+The development is structured into three phases to bridge the gap between simulation and hardware:
 
-```bash
-docker compose build
+1. **Phase 1: Reflexes** – Core autonomous flight, obstacle avoidance, and basic sensing using **ROS 2** and **Gazebo Harmonic**.
+2. **Phase 2: Social** – Distributed messaging protocols for real-time temperature data sharing and swarm coordination.
+3. **Phase 3: Brain** – Integration of the **MASS CUDA** library to run parallelized evolutionary algorithms on **NVIDIA Jetson Orin** hardware for strategic behavior selection.
+
+---
+
+## File Structure
+
+This repository uses a dual-environment Docker setup to ensure seamless collaboration across different operating systems.
+
+```text
+TESTSWARM/
+├── docker/
+│   ├── mac/               # MacOS environment (TigerVNC for Apple Silicon)
+│   │   ├── docker-compose.mac.yml
+│   │   ├── dockerfile
+│   │   └── entrypoint.sh
+│   └── windows/           # Windows environment (WSLg for native GUI)
+│       ├── docker-compose.windows.yml
+│       ├── dockerfile
+│       └── entrypoint.sh
+├── src/                   # ROS 2 Source Code
+│   └── swarm_test/        # Primary research package
+└── README.md
 ```
-### 2. Start the Container
-Launch the container in the background (detached mode) so it stays active while you work.
+## Installation & Setup
+Prerequisites
+
+- Docker Desktop (Installed and running)
+
+- TigerVNC Viewer (Required for macOS users)
+
+## Windows (WSL2/WSLg)
+
+Windows 11 users can leverage WSLg to forward the Gazebo GUI directly to the Windows desktop.
+
+1. **Launch the container:**
+
 ```
+cd docker/windows
 docker compose up -d
 ```
-### 3. Enter the Workspace
-Open an interactive bash shell inside the running container. This is where you will run your ROS nodes and build your packages.
+
+2. **Access the Shell:**
+
 ```
 docker exec -it swarm_dev bash
 ```
-Note: Once inside, your workspace is located at ~/swarm_ws.
-##  Development Workflow
-Opening Multiple Terminals
-To open additional terminal sessions (e.g., for monitoring topics or running multiple nodes), simply run the exec command again in a new window:
+
+## MacOS (Apple Silicon) Setup
+
+This setup uses a VNC server inside the container to handle Gazebo's 3D rendering on Apple Silicon hardware.
+
+1. **Launch the container:**
+
+```
+cd docker/mac
+docker compose -f docker-compose.mac.yml up -d
+```
+
+2. **Visual Interface:**
+ Open TigerVNC Viewer and connect to ``localhost:5900``. Leave the password blank.
+
+Access the Shell:
+
 ```
 docker exec -it swarm_dev bash
 ```
-##  Shutting Down
-When you are finished with your session, stop and remove the containers:
+
+
+## Development Workflow
+Once inside the container, follow these steps to build and run your nodes:
+
+#### Initialize and Build (should only need to build once)
+
 ```
-docker compose down
+# Ensure workspace permissions
+sudo chown -R swarm:swarm /swarm_ws
+cd /swarm_ws
+```
+
+#### Build the workspace
+```
+colcon build
+source install/setup.bash
+Launch Simulation:
+```
+
+```
+# Start Gazebo Harmonic
+gz sim -r forest_fire.sdf
+Run Research Node:
+```
+
+#### In a separate terminal tab
+```
+ros2 run swarm_test my_first_node
 ```
