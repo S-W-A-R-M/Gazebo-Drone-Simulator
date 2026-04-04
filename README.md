@@ -93,13 +93,11 @@ cd /swarm_ws
 ```
 colcon build
 source install/setup.bash
-Launch Simulation:
 ```
 
 ```
 # Start Gazebo Harmonic
 gz sim -r empty.sdf
-Run Research Node:
 ```
 
 #### In a separate terminal tab
