@@ -98,7 +98,7 @@ Launch Simulation:
 
 ```
 # Start Gazebo Harmonic
-gz sim -r forest_fire.sdf
+gz sim -r empty.sdf
 Run Research Node:
 ```
 
