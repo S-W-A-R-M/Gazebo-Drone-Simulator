@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Useful dev tools
     vim tmux wget curl \
     && rm -rf /var/lib/apt/lists/*
+    
 
 # ── rosdep init ──────────────────────────────────────────────────────────────
 RUN rosdep init 2>/dev/null || true && rosdep update
@@ -46,7 +47,7 @@ RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc \
     && echo "source /swarm_ws/install/setup.bash 2>/dev/null || true" >> ~/.bashrc \
     && echo "export ROS_DOMAIN_ID=42" >> ~/.bashrc
 
-COPY --chown=$USERNAME docker/windows /entrypoint.sh
+COPY --chown=$USERNAME docker/windows/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

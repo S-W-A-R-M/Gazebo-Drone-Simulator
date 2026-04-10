@@ -9,4 +9,6 @@ if [ -f /swarm_ws/install/setup.bash ]; then
     source /swarm_ws/install/setup.bash
 fi
 
+sudo chown -R swarm:swarm /swarm_ws
+
 exec "$@"

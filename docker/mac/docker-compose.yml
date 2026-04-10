@@ -2,7 +2,7 @@
 services:
   swarm-dev:
     build:
-      context: .
+      context: ../.. 
       dockerfile: docker/mac/dockerfile
     platform: linux/arm64        
     container_name: swarm_dev
@@ -22,7 +22,7 @@ services:
       # X11 socket from XQuartz
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       # Your source code (live-editable from host)
-      - ./src:/swarm_ws/src:rw
+      - ../../src:/swarm_ws/src:rw   # ← repo root src
       # Build artifacts persist across container restarts
       - swarm_build:/swarm_ws/build
       - swarm_install:/swarm_ws/install
