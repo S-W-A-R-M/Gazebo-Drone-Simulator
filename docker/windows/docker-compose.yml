@@ -23,6 +23,7 @@ services:
       - swarm_build:/swarm_ws/build
       - swarm_install:/swarm_ws/install
       - swarm_log:/swarm_ws/log
+      - ./tools:/home/swarm/tools:rw
     
     # ── Networking (required for multi-drone DDS discovery in Phase 2) ──────
     network_mode: host
