@@ -46,7 +46,7 @@ RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc \
     && echo "source /swarm_ws/install/setup.bash 2>/dev/null || true" >> ~/.bashrc \
     && echo "export ROS_DOMAIN_ID=42" >> ~/.bashrc
 
-COPY --chown=$USERNAME docker/entrypoint.sh /entrypoint.sh
+COPY --chown=$USERNAME docker/windows /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

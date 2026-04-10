@@ -3,7 +3,7 @@ services:
   swarm-dev:
     build:
       context: .
-      dockerfile: docker/Dockerfile
+      dockerfile: docker/mac/dockerfile
     platform: linux/arm64        
     container_name: swarm_dev
 
