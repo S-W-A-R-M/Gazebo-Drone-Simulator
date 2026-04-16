@@ -30,6 +30,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ── rosdep init ──────────────────────────────────────────────────────────────
 RUN rosdep init 2>/dev/null || true && rosdep update
 
+# ── PX4 Python dependencies ──────────────────────────────────────────────────
+RUN pip3 install --break-system-packages \
+    kconfiglib jinja2 jsonschema \
+    packaging toml numpy pyros-genmsg
+
+    # ── Build and install Micro XRCE-DDS Agent ───────────────────────────────────
+RUN cd /tmp && git clone https://github.com/eProsima/Micro-XRCE-DDS-Agent.git \
+    && cd Micro-XRCE-DDS-Agent && mkdir build && cd build \
+    && cmake .. && make -j$(nproc) && make install \
+    && ldconfig /usr/local/lib/ \
+    && rm -rf /tmp/Micro-XRCE-DDS-Agent
+
 # ── Non-root user (matches your WSL UID to avoid permission issues) ──────────
 ARG USERNAME=swarm
 ARG USER_UID=1000
