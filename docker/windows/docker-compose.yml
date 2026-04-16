@@ -12,12 +12,13 @@ services:
       - WAYLAND_DISPLAY=${WAYLAND_DISPLAY}
       - XDG_RUNTIME_DIR=/tmp/runtime-swarm
       - ROS_DOMAIN_ID=42
-      - LIBGL_ALWAYS_SOFTWARE=0   # set to 1 if you hit GPU rendering issues
+      - LIBGL_ALWAYS_SOFTWARE=1
+      
     volumes:
       # WSLg sockets
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - /mnt/wslg:/mnt/wslg:rw
-      - ../../tools:/home/swarm/tools:rw
+      - ../../tools:/home/swarm/tools:rw  
       # Your source code (live-editable from host)
       - ../../src:/swarm_ws/src:rw   # ← repo root src
       # Build artifacts persist across container restarts
