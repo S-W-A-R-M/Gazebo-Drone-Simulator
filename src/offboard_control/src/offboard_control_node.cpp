@@ -6,6 +6,7 @@
 #include <px4_msgs/msg/trajectory_setpoint.hpp>
 #include <px4_msgs/msg/vehicle_command.hpp>
 #include <px4_msgs/msg/vehicle_local_position.hpp>
+#include <sensor_msgs/msg/temperature.hpp>
 
 using namespace std::chrono_literals;
 
@@ -26,6 +27,11 @@ class OffBoardControlNode : public rclcpp::Node
         std::bind(&OffBoardControlNode::position_callback, this, std::placeholders::_1)
         );
 
+        //temperature subscriber
+        temp_sub_ = this->create_subscription<sensor_msgs::msg::Temperature>(
+        "/drone/temperature", 10,
+        std::bind(&OffBoardControlNode::temperature_callback, this, std::placeholders::_1));
+
         // Publish every 100ms/ 10Hz
         timer_ = this->create_wall_timer(100ms, std::bind(&OffBoardControlNode::timer_callback, this));
 
@@ -43,10 +49,11 @@ class OffBoardControlNode : public rclcpp::Node
             publish_vehicle_command(px4_msgs::msg::VehicleCommand::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0); // 1.0 to arm and 0.0 to disarm
         }
 
-        if(waypointIndex >= waypoints.size() - 1){ //land
-             publish_vehicle_command(px4_msgs::msg::VehicleCommand::VEHICLE_CMD_NAV_LAND);//autoland
-             landing_ = true;
-         }
+        //check if all waypoints reached, if so then land
+        if(waypointIndex >= waypoints.size() - 1 && check_waypoint_reached()){ 
+            publish_vehicle_command(px4_msgs::msg::VehicleCommand::VEHICLE_CMD_NAV_LAND);
+            landing_ = true;
+        }
 
         // Only publish offboard streams if not landing
         if (!landing_) {
@@ -110,16 +117,19 @@ class OffBoardControlNode : public rclcpp::Node
         float x, y, z;
     };
 
+
     xyzPoint get_current_waypoint(){
         if(waypointIndex >= waypoints.size()){
-            return waypoints[waypoints.size()]; //return last waypoint 
+            return waypoints[waypoints.size() - 1]; //return last waypoint 
         }
         return waypoints[waypointIndex];
     }
 
-    void position_callback(const px4_msgs::msg::VehicleLocalPosition::SharedPtr msg){ //always updating in the background
-    current_pos_ = *msg;
+
+    void position_callback(const px4_msgs::msg::VehicleLocalPosition::SharedPtr msg){ //always updating position in the background
+        current_pos_ = *msg;
     }
+
 
     bool check_waypoint_reached(){
         auto const target = get_current_waypoint();
@@ -129,15 +139,24 @@ class OffBoardControlNode : public rclcpp::Node
         float dy = std::abs(current_pos_.y - target.y);
         float dz = std::abs(current_pos_.z - target.z); 
 
-        if(dx <= 0.25 && dy <= 0.25 && dz <= 0.25){ //when within 0.25 meters of waypoint
+        if(dx <= 0.25 && dy <= 0.25 && dz <= 0.25){ //return true when within 0.25 meters of waypoint
             return true;
         }
         return false;
     }
 
+    //temperature callback 
+    void temperature_callback(const sensor_msgs::msg::Temperature::SharedPtr msg){ //update temperature 
+    current_temp_ = msg->temperature; //update temperature 
+    }
+
+
+    float current_temp_ = 0.0; //initialize temperature 
+
     //Subscribers
     rclcpp::Subscription<px4_msgs::msg::VehicleLocalPosition>::SharedPtr local_pos_sub_; 
     px4_msgs::msg::VehicleLocalPosition current_pos_;  // stores latest position
+    rclcpp::Subscription<sensor_msgs::msg::Temperature>::SharedPtr temp_sub_;
 
     //publishers
     rclcpp::Publisher<px4_msgs::msg::OffboardControlMode>::SharedPtr control_pub_;

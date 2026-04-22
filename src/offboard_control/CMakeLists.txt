@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(offboard_control_node)
+project(swarm_drone)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -9,13 +9,20 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(px4_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
-# Build the node
+# Build the offboard control node
 add_executable(offboard_control_node src/offboard_control_node.cpp)
-ament_target_dependencies(offboard_control_node rclcpp px4_msgs)
+ament_target_dependencies(offboard_control_node rclcpp px4_msgs sensor_msgs)
 
-# Install
-install(TARGETS offboard_control_node
+# Build the temperature node
+add_executable(thermal_sensor_node src/thermal_sensor_node.cpp)
+ament_target_dependencies(thermal_sensor_node rclcpp sensor_msgs px4_msgs)
+
+# Install both executables
+install(TARGETS 
+  offboard_control_node
+  thermal_sensor_node
   DESTINATION lib/${PROJECT_NAME})
 
 ament_package()

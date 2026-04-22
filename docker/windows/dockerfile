@@ -57,7 +57,8 @@ WORKDIR /home/$USERNAME
 # ── Shell convenience ────────────────────────────────────────────────────────
 RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc \
     && echo "source /swarm_ws/install/setup.bash 2>/dev/null || true" >> ~/.bashrc \
-    && echo "export ROS_DOMAIN_ID=42" >> ~/.bashrc
+    && echo "export ROS_DOMAIN_ID=42" >> ~/.bashrc \
+    && echo "export PX4_GZ_NO_FOLLOW=1" >> ~/.bashrc 
 
 COPY --chown=$USERNAME docker/windows/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
