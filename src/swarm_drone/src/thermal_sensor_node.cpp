@@ -19,7 +19,7 @@ public:
     timer_ = this->create_wall_timer(
       500ms, std::bind(&ThermalSensorNode::publish_temperature, this));
       
-    //loacl position subsription   
+    //local position subsription   
     local_pos_sub_ = this->create_subscription<px4_msgs::msg::VehicleLocalPosition>(
         "/fmu/out/vehicle_local_position_v1", 
         rclcpp::SensorDataQoS(), 

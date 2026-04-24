@@ -27,10 +27,11 @@ class OffBoardControlNode : public rclcpp::Node
         std::bind(&OffBoardControlNode::position_callback, this, std::placeholders::_1)
         );
 
-        //temperature subscriber
-        temp_sub_ = this->create_subscription<sensor_msgs::msg::Temperature>(
-        "/drone/temperature", 10,
-        std::bind(&OffBoardControlNode::temperature_callback, this, std::placeholders::_1));
+
+        //subscribe to target position
+        target_pos_sub_ = this->create_subscription<px4_msgs::msg::TrajectorySetpoint>(
+        "/mission/target_position", 10,
+        std::bind(&OffBoardControlNode::target_position_callback, this, std::placeholders::_1));
 
         // Publish every 100ms/ 10Hz
         timer_ = this->create_wall_timer(100ms, std::bind(&OffBoardControlNode::timer_callback, this));
@@ -42,6 +43,7 @@ class OffBoardControlNode : public rclcpp::Node
     void timer_callback(){
         offboard_setpoint_counter_++;
 
+        //TAKEOFF 
         if(offboard_setpoint_counter_ == 10){ //takeoff after 1 second 100ms * 10 = 1 sec
             // Switch to offboard mode
             publish_vehicle_command(px4_msgs::msg::VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1.0, 6.0); //1.0 indicates custom mode. 6.0 is the specific ID for Offboard mode in PX4
@@ -49,25 +51,11 @@ class OffBoardControlNode : public rclcpp::Node
             publish_vehicle_command(px4_msgs::msg::VehicleCommand::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0); // 1.0 to arm and 0.0 to disarm
         }
 
-        //check if all waypoints reached, if so then land
-        if(waypointIndex >= waypoints.size() - 1 && check_waypoint_reached()){ 
-            publish_vehicle_command(px4_msgs::msg::VehicleCommand::VEHICLE_CMD_NAV_LAND);
-            landing_ = true;
-        }
-
-        // Only publish offboard streams if not landing
-        if (!landing_) {
-        // Only increment if there are waypoints left
-        if (waypointIndex < waypoints.size() - 1) {
-            if (check_waypoint_reached()) {
-                waypointIndex++;
-                RCLCPP_INFO(this->get_logger(), "Moving to Waypoint: %ld", waypointIndex);
-            }
-        }
+        //RCLCPP_INFO(this->get_logger(), "Moving to Waypoint: %ld", waypointIndex);
         
         publish_offboard_control_mode();
         publish_trajectory_setpoint();
-    }
+    
 }
 
     //tell flight controller which setpoint field (postion in this case) is active 
@@ -86,11 +74,10 @@ class OffBoardControlNode : public rclcpp::Node
     //defines the desired position, velocity, acceleration, jerk, and yaw setpoints to the controller
     // use 'ros2 interface show px4_msgs/msg/TrajectorySetpoint' to see msg fields
     void publish_trajectory_setpoint(){
-        auto target = get_current_waypoint(); //grabs waypoint from waypoint vector
+        auto target = current_target_; //grabs waypoint from mission control node
 
         px4_msgs::msg::TrajectorySetpoint msg{};
         msg.position = {target.x, target.y, target.z};  
-        //msg.yaw = -3.14159; //180 degrees
         msg.timestamp = this->get_clock()->now().nanoseconds() / 1000;
         trajec_set_pub_->publish(msg);
     }
@@ -118,45 +105,24 @@ class OffBoardControlNode : public rclcpp::Node
     };
 
 
-    xyzPoint get_current_waypoint(){
-        if(waypointIndex >= waypoints.size()){
-            return waypoints[waypoints.size() - 1]; //return last waypoint 
-        }
-        return waypoints[waypointIndex];
-    }
-
-
     void position_callback(const px4_msgs::msg::VehicleLocalPosition::SharedPtr msg){ //always updating position in the background
         current_pos_ = *msg;
     }
 
-
-    bool check_waypoint_reached(){
-        auto const target = get_current_waypoint();
-
-        //calculate deltas
-        float dx = std::abs(current_pos_.x - target.x);
-        float dy = std::abs(current_pos_.y - target.y);
-        float dz = std::abs(current_pos_.z - target.z); 
-
-        if(dx <= 0.25 && dy <= 0.25 && dz <= 0.25){ //return true when within 0.25 meters of waypoint
-            return true;
-        }
-        return false;
+    void target_position_callback(const px4_msgs::msg::TrajectorySetpoint::SharedPtr msg){
+        // Update the current target position based on the received message
+        current_target_.x = msg->position[0];
+        current_target_.y = msg->position[1];
+        current_target_.z = msg->position[2];
     }
 
-    //temperature callback 
-    void temperature_callback(const sensor_msgs::msg::Temperature::SharedPtr msg){ //update temperature 
-    current_temp_ = msg->temperature; //update temperature 
-    }
+    xyzPoint current_target_ = {0.0, 0.0, 0.0};  // default target position
 
-
-    float current_temp_ = 0.0; //initialize temperature 
 
     //Subscribers
     rclcpp::Subscription<px4_msgs::msg::VehicleLocalPosition>::SharedPtr local_pos_sub_; 
     px4_msgs::msg::VehicleLocalPosition current_pos_;  // stores latest position
-    rclcpp::Subscription<sensor_msgs::msg::Temperature>::SharedPtr temp_sub_;
+    rclcpp::Subscription<px4_msgs::msg::TrajectorySetpoint>::SharedPtr target_pos_sub_;
 
     //publishers
     rclcpp::Publisher<px4_msgs::msg::OffboardControlMode>::SharedPtr control_pub_;
@@ -166,21 +132,8 @@ class OffBoardControlNode : public rclcpp::Node
     rclcpp::TimerBase::SharedPtr timer_;
     uint64_t offboard_setpoint_counter_; 
     bool landing_ = false;
-    size_t waypointIndex = 0; 
+     
 
-    
-    std::vector<xyzPoint> waypoints = {  //waypoints for lawnmower algorithm
-        {0,0, -5}, //takeoff
-        {0,10, -5}, 
-        {2,10, -5}, 
-        {2,10, -5}, 
-        {2,0, -5}, 
-        {4, 0, -5}, 
-        {4, 10, -5},
-        {6, 10, -5},
-        {6, 0, -5},
-        {0, 0, -5}
-    };
 };
 
 int main(int argc, char * argv[]){
