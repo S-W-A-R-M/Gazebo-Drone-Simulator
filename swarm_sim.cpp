@@ -166,6 +166,8 @@ public:
     Vec2        perimeter_start;
     float       orbit_dir = 1.0f;   // 1.0 = one way, -1.0 = other
     std::string last_action = "initialized";
+    char facing = 'S';  // Initial direction (North)
+    bool fire_on_right; 
 
     // Lawnmower waypoints
     std::vector<Vec2> search_waypoints;
@@ -179,6 +181,10 @@ public:
     // ── Movement primitives ────────────────────────────────────────
     bool move(Vec2 direction, World& world) {
         Vec2 next = pos + direction;
+            if(direction.x == 1) facing = 'E';
+            else if(direction.x == -1) facing = 'W';
+            else if(direction.y == 1) facing = 'S';
+            else if(direction.y == -1) facing = 'N';
         if (!world.in_bounds(next.x, next.y)) return false;
         last_pos = pos;
         pos = next;
@@ -189,8 +195,40 @@ public:
 
     bool move_north(World& w) { return move({0, -1}, w); }
     bool move_south(World& w) { return move({0,  1}, w); }
-    bool move_east (World& w) { return move({ 1, 0}, w); }
+    bool move_east (World& w) { return move({ 1, 0}, w); }  
     bool move_west (World& w) { return move({-1, 0}, w); }
+
+    bool moveRightFromFacing(World& w){
+        if(facing == 'N') return move_east(w);
+        else if(facing == 'E') return move_south(w);
+        else if(facing == 'S') return move_west(w);
+        else if(facing == 'W') return move_north(w);
+        return false;
+    }
+
+    bool moveLeftFromFacing(World& w){
+        if(facing == 'N') return move_west(w);
+        else if(facing == 'E') return move_north(w);
+        else if(facing == 'S') return move_east(w);
+        else if(facing == 'W') return move_south(w);
+        return false;
+    }
+
+    bool moveForwardFromFacing(World& w){
+        if(facing == 'N') return move_north(w);
+        else if(facing == 'E') return move_east(w);
+        else if(facing == 'S') return move_south(w);
+        else if(facing == 'W') return move_west(w);
+        return false;
+    }
+
+    bool moveCounterClockwiseFromFacing(World& w){
+        if(facing == 'N') return move_west(w);
+        else if(facing == 'E') return move_north(w);
+        else if(facing == 'S') return move_east(w);
+        else if(facing == 'W') return move_south(w);
+        return false;
+    }
 
     // Move toward a target position (one step)
     bool move_toward(Vec2 target, World& world) {
@@ -208,6 +246,8 @@ public:
         return false;
     }
 
+    
+    
     bool at_target(Vec2 target) const {
         return pos == target;
     }
@@ -379,11 +419,13 @@ public:
                   << state_color(drone.state) << BOLD 
                   << state_name(drone.state) << RESET << "\n";
         std::cout << "  Position : (" << drone.pos.x << ", " << drone.pos.y << ")\n";
+        std::cout << "  Facing   : " << drone.facing << "\n";
         std::cout << "  Temp     : " << temp_color(drone.current_temp) << BOLD
                   << std::fixed << std::setprecision(1) 
                   << drone.current_temp << "°C" << RESET << "\n";
         std::cout << "  Steps    : " << drone.steps << "\n";
-        std::cout << "  Action   : " << DIM << drone.last_action << RESET << "\n";
+        std::cout << "  Last Action   : " << DIM << drone.last_action << RESET << "\n";
+        
 
         if (drone.state == DroneState::SEARCH && !drone.search_waypoints.empty()) {
             auto wp = drone.current_waypoint();
@@ -433,6 +475,7 @@ bool algo_search(Drone& drone, World& world) {
         drone.perimeter_steps = 0;
         drone.orbit_dir = 1.0f;
         drone.last_action = "SEARCH → PERIMETER (temp threshold crossed)";
+        
         return true;
     }
 
@@ -448,7 +491,7 @@ bool algo_search(Drone& drone, World& world) {
         drone.advance_waypoint();
         wp = drone.current_waypoint();
         drone.last_action = "waypoint reached, advancing";
-    }
+    } 
 
     drone.move_toward(wp, world);
     drone.last_action = "moving to waypoint (" + 
@@ -465,6 +508,7 @@ bool algo_search(Drone& drone, World& world) {
  *
  * This is where YOU can plug in alternative algorithms.
  */
+
 bool algo_perimeter(Drone& drone, World& world) {
     // Set starting position first time we enter this state
     if (!drone.perimeter_start_set) {
@@ -550,6 +594,73 @@ bool algo_perimeter(Drone& drone, World& world) {
     return true;
 }
 
+
+/**
+ * ALGORITHM: Perimeter Tracing 
+ * Uses simpler algorith that reacts simply to temperature thresholds to decide when to move inward/outward,
+ * without trying to estimate the gradient direction.
+ *
+ * This is where YOU can plug in alternative algorithms.
+ */
+ 
+bool algo_perimeter2(Drone& drone, World& world) {
+    
+    // Set starting position first time we enter this state
+    if (!drone.perimeter_start_set) {
+        drone.perimeter_start = drone.pos;
+        drone.perimeter_start_set = true;
+        drone.perimeter_steps = 0;
+
+        // Decide initial orbit direction based on facing direction at perimeter entry
+        if (drone.facing == 'N' || drone.facing == 'E') {
+        drone.fire_on_right = true;   // fire on right
+        } else {
+        drone.fire_on_right = false; // fire on left
+        }
+
+        drone.last_action = "perimeter start recorded at (" +
+                            std::to_string(drone.pos.x) + "," +
+                            std::to_string(drone.pos.y) + ")" + "perimeter start, orbit=" + 
+                            std::string(drone.orbit_dir > 0 ? "CW" : "CCW");
+        return true;
+    }
+
+    drone.perimeter_steps++;
+
+    
+
+    // Check if we've come full circle (min 20 steps before checking)
+    if (drone.perimeter_steps > 20) {
+        if (drone.at_target(drone.perimeter_start)) {
+            drone.state = DroneState::RETURN_HOME;
+            drone.last_action = "perimeter complete → RETURN HOME";
+            return true;
+        }
+    }
+
+    std::string correction_reason = "on boundary";
+
+    if (drone.current_temp > HIGH_THRESH) {
+        if (drone.fire_on_right) drone.moveLeftFromFacing(world);
+        else                     drone.moveRightFromFacing(world);
+        correction_reason = "too hot, backing off";
+
+    } else if (drone.current_temp < LOW_THRESH) {
+        if (drone.fire_on_right) drone.moveRightFromFacing(world);
+        else                     drone.moveLeftFromFacing(world);
+        correction_reason = "too cold, moving in";
+
+    } else {
+        drone.moveForwardFromFacing(world);
+        correction_reason = "on boundary, following perimeter";
+    }
+
+    drone.last_action = "perimeter trace: " + correction_reason +
+                        " (" + std::to_string(drone.current_temp).substr(0,4) + "°C)";
+    return true;
+}
+
+
 /**
  * ALGORITHM: Return Home
  * Simply moves toward home position.
@@ -585,11 +696,14 @@ public:
 
     void setup() {
         // ── Add fire sources ──────────────────────────────────────
-        // Single fire blob in the middle of the search area
+        //Single fire blob in the middle of the search area
         world.add_fire(12.0f, 8.0f, 18.0f);
 
         // Uncomment to add a second fire source for testing irregular shapes:
-        // world.add_fire(20.0f, 14.0f, 12.0f, 90.0f);
+        //world.add_fire(10.0f, 14.0f, 12.0f, 90.0f);
+
+        //rectangular fire for testing perimeter following:
+        //world.add_fire(10.0f, 10.0f, 30.0f, 90.0f);
 
         // ── Build lawnmower pattern ───────────────────────────────
         // Search the area x: 0→24, y: 0→18, lanes every 2 cols
@@ -617,7 +731,7 @@ public:
                 algo_search(drone, world);
                 break;
             case DroneState::PERIMETER:
-                algo_perimeter(drone, world);
+                algo_perimeter2(drone, world);
                 break;
             case DroneState::RETURN_HOME:
                 algo_return_home(drone, world);
