@@ -13,15 +13,44 @@ Simulation::Simulation(int max_steps)
 
 void Simulation::setup() {
 
+    //PASS
     // world.add_fire(8.0f, 8.0f, 18.0f);
     // world.add_fire(9.0f, 6.0f, 10.0f);
     // world.add_fire(10.0f, 10.0f, 30.0f, 90.0f);
     // world.add_fire(10.0f, 7.0f, 10.0f, 90.0f);
 
-    //test another fire pattern
-    world.add_fire(15.0f, 10.0f, 40.0f, 90.0f);
-    world.add_fire(18.0f, 12.0f, 20.0f, 80.0f);
-    world.add_fire(12.0f, 8.0f, 20.0f, 80.0f);
+    //test another fire pattern PASS
+    // world.add_fire(15.0f, 10.0f, 40.0f, 90.0f);
+    // world.add_fire(18.0f, 12.0f, 20.0f, 80.0f);
+    // world.add_fire(12.0f, 8.0f, 20.0f, 80.0f);
+
+    // L-Shape Fire PASS
+    // world.add_fire(12.0f, 6.0f, 20.0f);
+    // world.add_fire(12.0f, 10.0f, 20.0f);
+    // world.add_fire(12.0f, 14.0f, 20.0f);
+    // world.add_fire(16.0f, 14.0f, 20.0f);
+    // world.add_fire(20.0f, 14.0f, 20.0f);
+
+    // // Dumbbell Fire FAIL 
+    // world.add_fire(8.0f, 10.0f, 35.0f);  // Left lobe
+    // world.add_fire(22.0f, 10.0f, 35.0f); // Right lobe
+    // world.add_fire(15.0f, 10.0f, 15.0f); // Narrow connecting bridge
+
+
+    // // C-Shape Fire FAIL
+    // world.add_fire(10.0f, 6.0f,  20.0f); // Top lip
+    // world.add_fire(15.0f, 6.0f,  20.0f);
+    // world.add_fire(18.0f, 8.0f,  20.0f); // Back wall
+    // world.add_fire(18.0f, 12.0f, 20.0f);
+    // world.add_fire(15.0f, 14.0f, 20.0f); // Bottom lip
+    // world.add_fire(10.0f, 14.0f, 20.0f);
+
+    // Irregular Bumpy Wall FAIL somewhat but not fully
+    world.add_fire(8.0f,  12.0f, 18.0f);
+    world.add_fire(11.0f, 10.0f, 22.0f);
+    world.add_fire(14.0f, 13.0f, 15.0f);
+    world.add_fire(17.0f, 9.0f,  25.0f);
+    world.add_fire(21.0f, 11.0f, 20.0f);
     
     drone.build_lawnmower(0, 0, 24, 18, 2);
     drone.sense(world);
