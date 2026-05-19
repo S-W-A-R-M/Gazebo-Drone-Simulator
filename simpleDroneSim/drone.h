@@ -39,6 +39,10 @@ public:
     bool moveLeft(World& w);
     bool moveForward(World& w);
     bool setFacing(char dir);
+    void turnAround();
+    void turnRight();
+    void turnLeft();
+    Vec2 facing_cell() const;
 
     bool move_toward(Vec2 target, World& world);
     bool at_target(Vec2 target) const;
