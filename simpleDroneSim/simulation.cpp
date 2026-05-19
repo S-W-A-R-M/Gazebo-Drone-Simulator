@@ -19,9 +19,10 @@ void Simulation::setup() {
     // world.add_fire(10.0f, 7.0f, 10.0f, 90.0f);
 
     //test another fire pattern
-    world.add_fire(15.0f, 10.0f, 40.0f, 90.0f);
-    world.add_fire(18.0f, 12.0f, 20.0f, 80.0f);
-    world.add_fire(12.0f, 8.0f, 20.0f, 80.0f);
+    // world.add_fire(15.0f, 10.0f, 40.0f, 90.0f);
+    // world.add_fire(18.0f, 12.0f, 20.0f, 80.0f);
+    // world.add_fire(12.0f, 8.0f, 20.0f, 80.0f);
+
     
     drone.build_lawnmower(0, 0, 24, 18, 2);
     drone.sense(world);
@@ -42,7 +43,7 @@ bool Simulation::step() {
             algo_search(drone, world);
             break;
         case DroneState::PERIMETER:
-            boundaryTrace(drone, world);
+            bug1_perimeter(drone, world);
             break;
         case DroneState::RETURN_HOME:
             algo_return_home(drone, world);
