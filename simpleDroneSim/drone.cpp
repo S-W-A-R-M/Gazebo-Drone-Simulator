@@ -46,12 +46,38 @@ bool Drone::moveForward(World& w){
     return false;
 }
 
+void Drone::turnRight() {
+    if (facing == 'N') facing = 'E';
+    else if (facing == 'E') facing = 'S';
+    else if (facing == 'S') facing = 'W';
+    else if (facing == 'W') facing = 'N';
+}
+
+void Drone::turnLeft() {
+    if (facing == 'N') facing = 'W';
+    else if (facing == 'W') facing = 'S';
+    else if (facing == 'S') facing = 'E';
+    else if (facing == 'E') facing = 'N';
+}
+
+void Drone::turnAround() { turnRight(); turnRight(); }
+
+
 bool Drone::setFacing(char dir){
     if(dir == 'N' || dir == 'E' || dir == 'S' || dir == 'W'){
         facing = dir;
         return true;
     }
     return false;
+}
+
+// Returns the cell directly in front of the drone
+Vec2 Drone::facing_cell() const {
+    if (facing == 'N') return {pos.x, pos.y - 1};
+    if (facing == 'S') return {pos.x, pos.y + 1};
+    if (facing == 'E') return {pos.x + 1, pos.y};
+    if (facing == 'W') return {pos.x - 1, pos.y};
+    return pos;
 }
 
 bool Drone::move_toward(Vec2 target, World& world) {

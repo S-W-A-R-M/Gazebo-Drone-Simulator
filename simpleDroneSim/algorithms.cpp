@@ -86,7 +86,7 @@ bool boundaryTrace(Drone& drone, World& world) {
 
     //when HOT
     if (drone.current_temp > HIGH_THRESH) {
-        /*
+        /*  
         if small oscillation occurs, correct, then contunue in same direction as before correction
         dont let small correction dominate over forward progress, just use it to nudge in the right 
         direction when we detect we're drifting too far off the boundary
@@ -118,6 +118,117 @@ bool boundaryTrace(Drone& drone, World& world) {
     }
 
     drone.last_action = "perimeter trace: " + correction_reason + " (" + std::to_string(drone.current_temp).substr(0,4) + "°C)";
+    return true;
+}
+
+/// ALGORITHM: Bug1 Perimeter Tracing
+
+bool bug1_perimeter(Drone& drone, World& world) {
+
+    // ── Phase 0: approach fire until adjacent to hot cell ─────────
+    if (!drone.perimeter_start_set) {
+        
+        // Check if any neighbor is hot
+        bool hot_neighbor = 
+            world.get_temp(drone.pos.x + 1, drone.pos.y) >= HIGH_THRESH ||
+            world.get_temp(drone.pos.x - 1, drone.pos.y) >= HIGH_THRESH ||
+            world.get_temp(drone.pos.x, drone.pos.y + 1) >= HIGH_THRESH ||
+            world.get_temp(drone.pos.x, drone.pos.y - 1) >= HIGH_THRESH;
+
+        if (!hot_neighbor) {
+            // Keep moving toward fire — move toward hottest neighbor
+            Vec2 directions[4] = {{1,0},{-1,0},{0,1},{0,-1}};
+            Vec2 best_dir = {1, 0};
+            float best_temp = -1.0f;
+            
+            for (auto& d : directions) {
+                float t = world.get_temp(drone.pos.x + d.x, drone.pos.y + d.y);
+                if (t > best_temp && t < HIGH_THRESH) {
+                    best_temp = t;
+                    best_dir = d;
+                }
+            }
+            drone.move(best_dir, world);
+            drone.last_action = "approaching fire boundary...";
+            return true;
+        }
+
+        // Adjacent to hot cell — now set start and begin trace
+        drone.perimeter_start = drone.pos;
+        drone.perimeter_start_set = true;
+        drone.perimeter_steps = 0;
+
+        // Face toward the hottest neighbor so fire is on our right
+        Vec2 dirs[4] = {{1,0},{-1,0},{0,1},{0,-1}};
+        char dir_names[4] = {'E','W','S','N'};
+        float best = -1.0f;
+        for (int i = 0; i < 4; i++) {
+            float t = world.get_temp(drone.pos.x + dirs[i].x, 
+                                     drone.pos.y + dirs[i].y);
+            if (t > best) { best = t; drone.facing = dir_names[i]; }
+        }
+        // Fire is now directly ahead — turn left so fire is on right
+        drone.turnLeft();
+
+        drone.last_action = "adjacent to fire, starting trace";
+        return true;
+    }
+
+    drone.perimeter_steps++;
+
+    // completion check
+    if (drone.perimeter_steps > 20) {
+        if (std::abs(drone.pos.x - drone.perimeter_start.x) <= 1 &&
+            std::abs(drone.pos.y - drone.perimeter_start.y) <= 1) {
+            drone.state = DroneState::RETURN_HOME;
+            drone.last_action = "perimeter complete → RETURN HOME";
+            return true;
+        }
+    }
+
+
+    // ── Right-hand rule ───────────────────────────────────────────
+    // Priority: turn right → go straight → turn left → turn around
+    // "Too hot" counts as blocked (same as a physical wall)
+
+    // Try turning right first (hug the fire)
+    bool moved = false;
+
+    // 1. Try right
+    drone.turnRight();
+    if (world.get_temp(drone.facing_cell().x, drone.facing_cell().y) <= HIGH_THRESH) {
+        drone.moveForward(world);
+        moved = true;
+        drone.last_action = "right-hand: turned right";
+    }
+
+    // 2. Try straight
+    if (!moved) {
+        drone.turnLeft(); // undo the right turn
+        if (world.get_temp(drone.facing_cell().x, drone.facing_cell().y) <= HIGH_THRESH) {
+            drone.moveForward(world);
+            moved = true;
+            drone.last_action = "right-hand: went straight";
+        }
+    }
+
+    // 3. Try left
+    if (!moved) {
+        drone.turnLeft();
+        if (world.get_temp(drone.facing_cell().x, drone.facing_cell().y) <= HIGH_THRESH) {
+            drone.moveForward(world);
+            moved = true;
+            drone.last_action = "right-hand: turned left";
+        }
+    }
+
+    // 4. Turn around
+    if (!moved) {
+        drone.turnLeft(); // now facing backward
+        drone.moveForward(world);
+        drone.last_action = "right-hand: turned around";
+    }
+
     return true;
 }
 
